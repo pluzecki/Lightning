@@ -76,6 +76,38 @@ export default class Component extends Element {
         }
     }
 
+    static bindProperties(dependencies = [], func) {
+        return { __functionBinding: true, __dependencies: dependencies, __func: func };
+    }
+
+    __bindProperties(propObj, targetObj, targetProp) {
+        // 1. find binding position: find object and property name to be bound
+        const obj = targetObj;
+        const prop = targetProp;
+        const propDependencies = propObj.__dependencies;
+        const func = propObj.__func ? propObj.__func : (context) => context[propName];
+        
+        // 2. create setters for every given dependency
+        for (let i = 0; i < propDependencies.length; i++) {
+            const propName = propDependencies[i];
+
+            if (!this.hasOwnProperty(propName)) {
+                this[`__prop_bindings_${propName}`] = [{__obj: obj, __prop: prop, __func: func}];
+                Object.defineProperty(this, propName, {
+                    set: (value) => {
+                        this[`__prop_${propName}`] = value;
+                        for (const {__obj, __prop, __func} of this[`__prop_bindings_${propName}`]) {
+                            __obj[__prop] = __func(this);
+                        }
+                    },
+                    get: () => this[`__prop_${propName}`]
+                });
+            } else {
+                this[`__prop_bindings_${propName}`].push({__obj: obj, __prop: prop, __func: func});
+            }
+        }
+    }
+
     static bindProp(name, func = null) {
         return {__propertyBinding: true, __name: name, __func: func};
     }
@@ -181,6 +213,9 @@ export default class Component extends Element {
                         loc.push(`${propKey} = ${cursor}.texture`);
                         this.parseTemplatePropRec(value, context, propKey);
                     }
+                } else if (Utils.isObjectLiteral(value) && value.__functionBinding === true) {
+                    store.push(value);
+                    loc.push(`element.__bindProperties(store[${store.length - 1}], ${cursor}, "${key}")`);
                 } else if (Utils.isObjectLiteral(value) && value.__propertyBinding === true) {
                     store.push(value);
                     loc.push(`element.__bindProperty(store[${store.length - 1}], ${cursor}, "${key}")`);
@@ -215,6 +250,9 @@ export default class Component extends Element {
                     loc.push(`${cursor}["${key}"] = ${value}`);
                 } else if (Utils.isBoolean(value)) {
                     loc.push(`${cursor}["${key}"] = ${value ? "true" : "false"}`);
+                } else if (Utils.isObject(value) && value.__functionBinding === true) {
+                    store.push(value);
+                    loc.push(`element.__bindProperties(store[${store.length - 1}], ${cursor}, "${key}")`);
                 } else if (Utils.isObject(value) && value.__propertyBinding === true) {
                     store.push(value);
                     loc.push(`element.__bindProperty(store[${store.length - 1}], ${cursor}, "${key}")`);

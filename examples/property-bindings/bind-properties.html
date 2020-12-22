@@ -1,0 +1,134 @@
+<!--
+ If not stated otherwise in this file or this component's LICENSE file the
+ following copyright and licenses apply:
+
+ Copyright 2020 RDK Management
+
+ Licensed under the Apache License, Version 2.0 (the License);
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <script src="../../devtools/lightning-inspect.js"></script>
+</head>
+<body style="margin: 0; padding: 0">
+    <script type="module">
+        import lng from '../../src/lightning.mjs';
+
+        window.onload = function() {
+            class Bug1 extends lng.Component {
+                static _template() {
+                    return {
+                        // size: 100,
+                        w: this.bindProp('size'),
+                        size: 100,
+                        h: 100,
+                        rect: true,
+                        color: 0xffffff00,
+                    }
+                }
+            }
+
+            class Bug2 extends lng.Component {
+                static _template() {
+                    return {
+                        Bug2: this.bindProp('size', (context) => ({
+                            rect: true,
+                            y: 100,
+                            w: context.size,
+                            h: 100,
+                            color: 0xff00ffff,
+                        })),
+                        size: 100,
+                    }
+                }
+            }
+
+            class BasicUsageExample extends lng.Application {
+                static _template() {
+                    return {
+                        w: w => w,
+                        h: h => h,
+                        Bug1: {
+                            type: Bug1,
+                        },
+                        Bug2: {
+                            type: Bug2,
+                        },
+                        Test1: {
+                            x: 250,
+                            y: 50,
+                            w: 300,
+                            h: 100,
+                            rect: true,
+                            color: this.bindProperties(['r', 'g'], (context) => {
+                                return `0xff${('0' + context.r).slice(-2)}${('0' + context.g).slice(-2)}00`
+                            }),
+                            Text: {
+                                x: 50,
+                                y: 20,
+                                text: {text: this.bindProperties(['r', 'g'], (context) => `0xff${('0' + context.r).slice(-2)}${('0' + context.g).slice(-2)}00`)}
+                            },
+                        },
+                        Test3: {
+                            x: 20,
+                            y: 350,
+                            text: {
+                                textColor: 0xffffffff,
+                                text: this.bindProperties(['firstName', 'lastName'], (context) => `${context.firstName} + ${context.lastName}`)
+                            },
+                        },
+                        Test4: {
+                            x: 0,
+                            y: 450,
+                            w: 100,
+                            h: 100,
+                            src: this.bindProp('landscapeSrc', (context) => {
+                                return context.landscapeSrc;
+                            }),
+                        },
+                        r: 0,
+                        g: 0,
+                        landscapeSrc: "../landscape.jpg",
+                        firstName: 'Piotr',
+                        lastName: 'Testszecki'
+                    }
+                }
+
+                _handleUp() {
+                    this.r = (Math.min(parseInt(this.r, 16) + 8, 255)).toString(16);
+                }
+
+                _handleDown() {
+                    this.r = (Math.max(parseInt(this.r, 16) - 8, 0)).toString(16);
+                }
+
+                _handleLeft() {
+                    this.g = (Math.max(parseInt(this.g, 16) - 8, 0)).toString(16);
+                }
+
+                _handleRight() {
+                    this.g = (Math.min(parseInt(this.g, 16) + 8, 255)).toString(16);
+                }
+            }
+
+            const options = {stage: {w: 900, h: 900, clearColor: 0xFF000000, canvas2d: false, useImageWorker: false}, debug: true}
+            const app = new BasicUsageExample(options);
+            document.body.appendChild(app.stage.getCanvas());
+        }
+    </script>
+</body>
+</html>
+
